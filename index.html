@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f7f8fc">
+  <meta name="description" content="2027年度 私立医学部の入試日程を整理できる受験カレンダー">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icon.svg">
+  <link rel="stylesheet" href="./styles.css">
+  <title>私立医学部 受験カレンダー 2027</title>
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="#top" aria-label="私立医学部 受験カレンダー ホーム">
+        <span class="brand-mark" aria-hidden="true">医</span>
+        <span><b>私立医学部</b><small>受験カレンダー 2027</small></span>
+      </a>
+      <button class="icon-button" id="installButton" type="button" hidden>アプリを追加</button>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="hero-copy">
+        <span class="eyebrow">2027年度 一般選抜</span>
+        <h1>受験日程を、<br><span>ひと目で整理。</span></h1>
+        <p>一次試験・二次試験・合格発表を、2027年1月〜3月のカレンダーで確認できます。</p>
+      </div>
+      <div class="hero-stat" aria-label="カレンダーの概要">
+        <span>CALENDAR</span><strong>01—03</strong><small>JAN / FEB / MAR 2027</small>
+      </div>
+    </section>
+
+    <aside class="notice" role="note">
+      <span aria-hidden="true">i</span>
+      <p><b>日程は必ず最新の募集要項で確認してください。</b><br>掲載内容は参考サイトで確認できた情報をもとにした参考データです。未公表・変更予定の日程があります。</p>
+    </aside>
+
+    <section class="workspace" aria-label="受験カレンダー">
+      <div class="calendar-panel">
+        <div class="calendar-toolbar">
+          <div>
+            <span class="section-label">EXAM SCHEDULE</span>
+            <h2 id="monthTitle">2027年1月</h2>
+          </div>
+          <div class="month-controls" aria-label="月の移動">
+            <button id="prevMonth" type="button" aria-label="前の月">←</button>
+            <button id="todayButton" type="button">1月</button>
+            <button id="nextMonth" type="button" aria-label="次の月">→</button>
+          </div>
+        </div>
+
+        <div class="filters" aria-label="表示する日程">
+          <button class="filter-chip is-active" data-type="all" type="button">すべて</button>
+          <button class="filter-chip" data-type="first" type="button"><i class="dot first"></i>一次</button>
+          <button class="filter-chip" data-type="second" type="button"><i class="dot second"></i>二次</button>
+          <button class="filter-chip" data-type="result" type="button"><i class="dot result"></i>発表</button>
+          <button class="filter-chip" data-type="custom" type="button"><i class="dot custom"></i>自分の予定</button>
+        </div>
+
+        <label class="show-all-control">
+          <span><b>全大学の日程を表示</b><small>OFFにすると選択した入試方式だけ表示</small></span>
+          <input id="showAllToggle" type="checkbox" checked>
+          <i aria-hidden="true"></i>
+        </label>
+
+        <div class="weekdays" aria-hidden="true">
+          <span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span>
+        </div>
+        <div class="calendar-grid" id="calendarGrid" role="grid" aria-labelledby="monthTitle"></div>
+        <div class="legend" aria-label="凡例">
+          <span><i class="dot first"></i>一次試験</span>
+          <span><i class="dot second"></i>二次試験</span>
+          <span><i class="dot result"></i>合格発表</span>
+          <span><i class="dot custom"></i>自分の予定</span>
+        </div>
+      </div>
+
+      <aside class="detail-panel" aria-live="polite">
+        <div class="detail-heading">
+          <div class="date-badge"><strong id="selectedDay">21</strong><span id="selectedWeekday">木</span></div>
+          <div><span class="section-label">SELECTED DATE</span><h2 id="selectedDate">1月21日</h2></div>
+        </div>
+        <div id="dayEvents" class="day-events"></div>
+
+        <form class="add-form" id="addForm">
+          <button class="add-form-toggle" id="addFormToggle" type="button" aria-expanded="false">＋ この日に予定を追加</button>
+          <div class="add-form-fields" id="addFormFields" hidden>
+            <label>大学・予定名<input id="customName" required maxlength="40" placeholder="例：○○大学"></label>
+            <label>区分
+              <select id="customType">
+                <option value="first">一次試験</option><option value="second">二次試験</option><option value="result">合格発表</option><option value="custom">その他</option>
+              </select>
+            </label>
+            <label>メモ<input id="customNote" maxlength="80" placeholder="会場・集合時間など"></label>
+            <button class="primary-button" type="submit">予定を保存</button>
+          </div>
+        </form>
+
+        <div class="memo-block">
+          <label for="memo"><span>全体メモ</span><small id="saveStatus">端末に自動保存</small></label>
+          <textarea id="memo" rows="4" placeholder="出願締切、宿泊、移動の注意など"></textarea>
+        </div>
+      </aside>
+    </section>
+
+    <section class="university-section" aria-labelledby="universityTitle">
+      <div class="university-intro">
+        <div><span class="section-label">SELECT UNIVERSITIES</span><h2 id="universityTitle">大学・入試方式を選択</h2></div>
+        <p>大学を開いて受験する方式にチェックをつけると、カレンダーを自分専用に絞り込めます。</p>
+      </div>
+      <div id="selectedSummary" class="selected-summary"></div>
+      <div id="universityList" class="university-list"></div>
+    </section>
+
+    <section class="guide">
+      <span class="section-label">HOW TO USE</span>
+      <h2>迷わないための、3ステップ</h2>
+      <div class="guide-grid">
+        <article><b>01</b><h3>日付を選ぶ</h3><p>色付きの日付をタップして、その日の試験を一覧表示。</p></article>
+        <article><b>02</b><h3>種類で絞る</h3><p>一次・二次・発表を切り替えて、重複をすばやく確認。</p></article>
+        <article><b>03</b><h3>自分の予定を足す</h3><p>会場や移動日も追加。入力内容はこの端末に保存されます。</p></article>
+      </div>
+    </section>
+  </main>
+
+  <div class="modal-backdrop" id="scheduleModal" hidden>
+    <section class="schedule-modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <header class="modal-header">
+        <div><span class="section-label">DAILY SCHEDULE</span><h2 id="modalTitle">2027年2月4日</h2><p id="modalCount"></p></div>
+        <button id="modalClose" type="button" aria-label="閉じる">×</button>
+      </header>
+      <p class="modal-help">チェックをつけると、選択した入試方式だけを受験カレンダーに表示できます。</p>
+      <div id="modalEvents" class="modal-events"></div>
+    </section>
+  </div>
+
+  <footer><p>2027 私立医学部 受験カレンダー</p><small>掲載情報は参考用です。出願前に各大学の公式情報をご確認ください。</small></footer>
+
+  <script src="./app.js" defer></script>
+</body>
+</html>

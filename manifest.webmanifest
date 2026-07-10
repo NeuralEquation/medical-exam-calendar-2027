@@ -1,0 +1,14 @@
+{
+  "name": "私立医学部 受験カレンダー 2027",
+  "short_name": "医学部カレンダー",
+  "description": "2027年度 私立医学部の入試日程を整理するカレンダー",
+  "lang": "ja",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f7f8fc",
+  "theme_color": "#f7f8fc",
+  "icons": [
+    {"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}

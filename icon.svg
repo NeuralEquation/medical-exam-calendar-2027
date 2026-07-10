@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="2027 受験カレンダー">
+  <rect width="512" height="512" rx="112" fill="#3157d5"/>
+  <rect x="72" y="98" width="368" height="326" rx="52" fill="#ffffff"/>
+  <path d="M72 193h368" stroke="#dfe7ff" stroke-width="30"/>
+  <path d="M166 72v74M346 72v74" stroke="#ffffff" stroke-width="28" stroke-linecap="round"/>
+  <rect x="106" y="128" width="300" height="35" rx="17.5" fill="#17213a"/>
+  <circle cx="133" cy="145.5" r="6" fill="#f1c95d"/>
+  <text x="256" y="326" text-anchor="middle" fill="#17213a" font-family="Arial, sans-serif" font-size="100" font-weight="800" letter-spacing="-5">2027</text>
+  <path d="M157 365h198" stroke="#f1c95d" stroke-width="12" stroke-linecap="round"/>
+</svg>

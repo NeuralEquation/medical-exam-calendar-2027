@@ -19,8 +19,9 @@ vm.runInContext('examOptions = data.rows.map(row => normalizeMethod(row, data.co
 const run = (expression) => JSON.parse(JSON.stringify(vm.runInContext(expression, context)));
 const method = (university, name) => `examOptions.find(o => o.university === ${JSON.stringify(university)} && o.method === ${JSON.stringify(name)})`;
 
-test('all 31 universities and 51 methods have valid, ordered 2027 stages', () => {
-  vm.runInContext('validateAdmissionsData(examOptions)', context);
+test('all 31 universities and 84 methods have valid, ordered 2027 stages', () => {
+  vm.runInContext('validateAdmissionsData(examOptions, data.coverage)', context);
+  assert.equal(data.rows.length, 84);
   for (const row of data.rows) {
     assert.equal(row.length, data.columns.length);
     const option = run(method(row[0], row[2]));
@@ -28,7 +29,7 @@ test('all 31 universities and 51 methods have valid, ordered 2027 stages', () =>
       assert.equal(new Set(dates).size, dates.length);
       assert.deepEqual(dates, [...dates].sort());
       for (const date of dates) assert.equal(new Date(`${date}T12:00:00Z`).toISOString().slice(0, 10), date);
-      if (stage !== 'first' || !option.commonTest) assert.ok(dates.length, `${row[0]} ${row[2]} ${stage} is missing`);
+      if (['firstResult', 'second', 'final'].includes(stage) || stage === 'first' && !option.commonTest) assert.ok(dates.length, `${row[0]} ${row[2]} ${stage} is missing`);
     }
     const { first, firstResult, second, final } = option.stages;
     if (first.length) assert.ok(first.at(-1) <= firstResult[0]);
@@ -62,8 +63,15 @@ test('Juntendo B keeps both required second-stage days and its later result sche
   assert.match(option.note, /両日/);
 });
 
-test('official sources appear only on verified methods', () => {
-  assert.equal(run('examOptions.filter(o => o.source).length'), 10);
+test('every new method has an official source and the correct checked date', () => {
+  const oldNames = new Set(JSON.parse(fs.readFileSync(path.join(root, 'tests/original-methods.json'), 'utf8')).map(pair => pair.join('|')));
+  for (const option of run('examOptions')) {
+    if (!oldNames.has(`${option.university}|${option.method}`)) assert.ok(option.source);
+    if (option.source) {
+      assert.equal(new URL(option.source.url).protocol, 'https:');
+      assert.equal(option.source.checkedOn, '2026-10-15');
+    }
+  }
   for (const source of Object.values(data.sources)) {
     assert.equal(new URL(source.url).protocol, 'https:');
     assert.equal(source.checkedOn, '2026-10-15');
@@ -79,4 +87,51 @@ test('saved current selections, legacy selections and per-method memos survive m
   const memos = JSON.parse(storage.get('medExamOptionMemos2027'));
   assert.equal(memos[id], '保存済みメモ');
   assert.equal(memos[run(`${method('東京慈恵会医科大学', '一般')}.id`)], '以前のメモ');
+});
+
+test('common-test-only and combined routes generate the required January and individual exam events', () => {
+  const pure = method('北里大学', '共通テスト利用（後期）');
+  assert.deepEqual(run(`${pure}.stages.common`), ['2027-01-16', '2027-01-17']);
+  assert.deepEqual(run(`${pure}.stages.first`), []);
+  const combined = method('関西医科大学', '共通テスト・一般併用');
+  assert.deepEqual(run(`${combined}.stages.common`), ['2027-01-16', '2027-01-17']);
+  assert.deepEqual(run(`${combined}.stages.first`), ['2027-02-02']);
+  assert.deepEqual(run(`flattenOption(${combined}).filter(e => e.stage === 'common').map(e => [e.date, e.label, e.type])`), [['2027-01-16', '共通テスト', 'first'], ['2027-01-17', '共通テスト', 'first']]);
+});
+
+test('IUHW common-test second-stage exams never fill the intervening days', () => {
+  const expression = method('国際医療福祉大学', '共通テスト利用');
+  assert.deepEqual(run(`${expression}.stages.second`), ['2027-02-16', '2027-02-20']);
+  for (const day of ['17', '18', '19']) assert.equal(run(`flattenOption(${expression}).some(e => e.date === '2027-02-${day}')`), false);
+});
+
+test('required essays and conditional second-stage exams retain their distinct labels', () => {
+  const essay = run(`flattenOption(${method('東京医科大学', '共通テスト利用')}).find(e => e.date === '2027-02-06')`);
+  assert.equal(essay.label, '小論文（必須）');
+  assert.equal(essay.type, 'second');
+  const reserve = run(`flattenOption(${method('大阪医科薬科大学', '一般前期')}).find(e => e.date === '2027-03-03')`);
+  assert.equal(reserve.label, '二次試験（繰上合格候補対象者のみ）');
+  assert.equal(reserve.type, 'second');
+});
+
+test('old combined UOEH selection and memo migrate to A and B without adding the common test to B', () => {
+  const oldId = run("stableId('産業医科大学','一般A・B')");
+  storage.set('medExamSelectedOptions2027', JSON.stringify([oldId]));
+  vm.runInContext(`optionMemos = { [${JSON.stringify(oldId)}]: '引き継ぐメモ' }; migrateStoredData();`, context);
+  const a = run(method('産業医科大学', '一般A'));
+  const b = run(method('産業医科大学', '一般B'));
+  assert.deepEqual(JSON.parse(storage.get('medExamSelectedOptions2027')), [a.id, b.id]);
+  const memos = JSON.parse(storage.get('medExamOptionMemos2027'));
+  assert.equal(memos[a.id], '引き継ぐメモ');
+  assert.equal(memos[b.id], '引き継ぐメモ');
+  assert.deepEqual(a.stages.common, ['2027-01-16', '2027-01-17']);
+  assert.deepEqual(b.stages.common, []);
+});
+
+test('original method identities remain selectable after the expansion', () => {
+  const pairs = JSON.parse(fs.readFileSync(path.join(root, 'tests/original-methods.json'), 'utf8'));
+  for (const [university, name] of pairs) {
+    if (university === '産業医科大学' && name === '一般A・B') continue;
+    assert.ok(run(`Boolean(${method(university, name)})`), `${university} ${name} disappeared`);
+  }
 });

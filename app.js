@@ -2,10 +2,10 @@ const $ = (selector) => document.querySelector(selector);
 const DATA_URL = './admissions-data.json';
 const months = [0, 1, 2];
 const typeLabels = { first: '一次試験', second: '二次試験', result: '合格発表', custom: 'その他' };
-const stageOrder = ['first', 'firstResult', 'second', 'final'];
-const stageLabels = { first: '一次試験', firstResult: '一次発表', second: '二次試験', final: '合格発表' };
-const stageShortLabels = { first: '1次', firstResult: '1次発表', second: '2次', final: '合格発表' };
-const stageTypes = { first: 'first', firstResult: 'result', second: 'second', final: 'result' };
+const stageOrder = ['common', 'first', 'firstResult', 'extra', 'second', 'final'];
+const stageLabels = { common: '共通テスト', first: '一次試験', firstResult: '一次発表', extra: '個別試験', second: '二次試験', final: '合格発表' };
+const stageShortLabels = { common: '共テ', first: '1次', firstResult: '1次発表', extra: '個別', second: '2次', final: '合格発表' };
+const stageTypes = { common: 'first', first: 'first', firstResult: 'result', extra: 'second', second: 'second', final: 'result' };
 const universityOrder = {
   '東北・北海道': ['岩手医科大学', '東北医科薬科大学'],
   '関東': ['慶應義塾大学', '順天堂大学', '自治医科大学', '国際医療福祉大学', '昭和医科大学', '東邦大学', '埼玉医科大学', '北里大学', '獨協医科大学', '杏林大学', '東京慈恵会医科大学', '東京女子医科大学', '日本医科大学', '東京医科大学', '日本大学', '聖マリアンナ医科大学', '東海大学', '帝京大学'],
@@ -29,7 +29,8 @@ const legacySelectionTargets = {
   dokkyo: [['獨協医科大学', '一般前期①'], ['獨協医科大学', '一般前期②'], ['獨協医科大学', '一般後期']],
   jikei: [['東京慈恵会医科大学', '一般']], 'nippon-med': [['日本医科大学', '一般前期'], ['日本医科大学', '一般後期']],
   aichi: [['愛知医科大学', '一般']], 'osaka-med': [['大阪医科薬科大学', '一般前期'], ['大阪医科薬科大学', '一般後期']],
-  sangyo: [['産業医科大学', '一般A・B'], ['産業医科大学', '一般C']]
+  sangyo: [['産業医科大学', '一般A'], ['産業医科大学', '一般B'], ['産業医科大学', '一般C']],
+  [stableId('産業医科大学', '一般A・B')]: [['産業医科大学', '一般A'], ['産業医科大学', '一般B']]
 };
 
 let examOptions = [];
@@ -82,6 +83,8 @@ function normalizeMethod(row, columns, sources = {}) {
   const firstEnd = normalizeDate(source.firstEnd);
   const secondStart = normalizeDate(source.secondStart);
   const secondEnd = normalizeDate(source.secondEnd);
+  const commonDates = (source.commonDates || []).map(normalizeDate);
+  const additionalTests = (source.additionalTests || []).map((test) => ({ ...test, date: normalizeDate(test.date) }));
   return {
     id: stableId(source.university, source.method),
     university: source.university,
@@ -89,8 +92,10 @@ function normalizeMethod(row, columns, sources = {}) {
     method: source.method,
     shortName: source.shortName,
     stages: {
+      common: commonDates,
       first: expandRange(firstStart, firstEnd),
       firstResult: source.firstResult ? [normalizeDate(source.firstResult)] : [],
+      extra: additionalTests.map((test) => test.date),
       second: source.secondDates ? source.secondDates.map(normalizeDate) : expandRange(secondStart, secondEnd),
       final: source.secondResult ? [normalizeDate(source.secondResult)] : []
     },
@@ -98,15 +103,17 @@ function normalizeMethod(row, columns, sources = {}) {
     firstVenue: source.firstVenue || '',
     secondVenue: source.secondVenue || '',
     note: source.note || '',
-    source: sources[source.university] || null,
-    commonTest: !firstStart && Boolean(source.note && source.note.includes('共通テスト'))
+    additionalTests,
+    source: source.sourceUrl ? { url: source.sourceUrl, checkedOn: source.sourceCheckedOn } : sources[source.university] || null,
+    commonTest: commonDates.length > 0 && !firstStart
   };
 }
 
-function validateAdmissionsData(options) {
+function validateAdmissionsData(options, coverage = null) {
   const universities = new Set(options.map((option) => option.university));
   const ids = new Set(options.map((option) => option.id));
-  if (options.length !== 51) throw new Error(`入試方式数が51件ではありません: ${options.length}`);
+  if (!options.length) throw new Error('入試方式がありません');
+  if (coverage && (options.length !== coverage.methods || universities.size !== coverage.universities)) throw new Error('収録件数と日程データが一致しません');
   if (universities.size !== 31) throw new Error(`大学数が31校ではありません: ${universities.size}`);
   if (ids.size !== options.length) throw new Error('入試方式キーが重複しています');
   for (const option of options) {
@@ -158,7 +165,7 @@ function flattenOption(option) {
     date,
     name: option.shortName,
     university: option.university,
-    label: stageLabels[stage],
+    label: stage === 'extra' ? option.additionalTests.find((test) => test.date === date).label : stageLabels[stage],
     stage,
     type: stageTypes[stage],
     note: option.method,
@@ -191,7 +198,7 @@ function calendarEvents(date) {
   return [...groups.values()].map((group) => {
     if (group.custom) return group;
     group.stages.sort((a, b) => stageOrder.indexOf(a) - stageOrder.indexOf(b));
-    group.type = group.stages.includes('first') ? 'first' : group.stages.includes('second') ? 'second' : 'result';
+    group.type = group.stages.some((stage) => stageTypes[stage] === 'first') ? 'first' : group.stages.some((stage) => stageTypes[stage] === 'second') ? 'second' : 'result';
     return group;
   });
 }
@@ -208,7 +215,7 @@ function formatDateList(dates, time = '') {
 }
 
 function formatStage(option, stage) {
-  if (stage === 'first' && option.commonTest) return '共通テスト';
+  if (stage === 'extra') return option.additionalTests.map((test) => `${escapeHTML(test.label)} ${formatDateList([test.date])}`).join('<br>');
   return formatDateList(option.stages[stage], option.stageTimes[stage] || '');
 }
 
@@ -276,10 +283,11 @@ function optionCardHTML(option, contextDate = '') {
   const meta = [
     option.firstVenue ? `<div><b>一次会場</b><span>${escapeHTML(option.firstVenue)}</span></div>` : '',
     option.secondVenue ? `<div><b>二次会場</b><span>${escapeHTML(option.secondVenue)}</span></div>` : '',
+    option.additionalTests.length ? `<div><b>個別試験</b><span>${formatStage(option, 'extra')}</span></div>` : '',
     option.note ? `<div class="option-note"><b>備考</b><span>${escapeHTML(option.note)}</span></div>` : '',
     option.source ? `<div><b>出典</b><span><a href="${escapeHTML(option.source.url)}" target="_blank" rel="noopener noreferrer">公式入試情報</a>（${escapeHTML(option.source.checkedOn)}確認）</span></div>` : ''
   ].join('');
-  return `<article class="exam-option${selected ? ' is-selected' : ''}" data-option-card="${option.id}"><div class="option-top"><label class="option-check"><input type="checkbox" data-option-check="${option.id}" ${selected ? 'checked' : ''}><span><b>${escapeHTML(option.shortName)} ${escapeHTML(option.method)}</b><small>${escapeHTML(option.university)} 医学部</small></span></label>${eventAtDate ? `<span class="option-day-tag">${escapeHTML(eventAtDate.label)}</span>` : ''}</div><div class="stage-flow"><div class="stage"><span>一次</span><b>${formatStage(option, 'first')}</b></div><div class="stage"><span>一次発表</span><b>${formatStage(option, 'firstResult')}</b></div><div class="stage"><span>二次</span><b>${formatStage(option, 'second')}</b></div><div class="stage"><span>合格発表</span><b>${formatStage(option, 'final')}</b></div></div>${meta ? `<div class="option-meta">${meta}</div>` : ''}<input class="option-memo" data-option-memo="${option.id}" value="${escapeHTML(optionMemos[option.id] || '')}" placeholder="${escapeHTML(option.shortName)} ${escapeHTML(option.method)}のメモ..."></article>`;
+  return `<article class="exam-option${selected ? ' is-selected' : ''}" data-option-card="${option.id}"><div class="option-top"><label class="option-check"><input type="checkbox" data-option-check="${option.id}" ${selected ? 'checked' : ''}><span><b>${escapeHTML(option.shortName)} ${escapeHTML(option.method)}</b><small>${escapeHTML(option.university)} 医学部</small></span></label>${eventAtDate ? `<span class="option-day-tag">${escapeHTML(eventAtDate.label)}</span>` : ''}</div><div class="stage-flow">${stageOrder.filter((stage) => stage === 'extra' ? false : stage === 'common' ? option.stages.common.length : stage !== 'first' || !option.commonTest).map((stage) => `<div class="stage"><span>${stageLabels[stage]}</span><b>${formatStage(option, stage)}</b></div>`).join('')}</div>${meta ? `<div class="option-meta">${meta}</div>` : ''}<input class="option-memo" data-option-memo="${option.id}" value="${escapeHTML(optionMemos[option.id] || '')}" placeholder="${escapeHTML(option.shortName)} ${escapeHTML(option.method)}のメモ..."></article>`;
 }
 
 function bindOptionControls(root = document) {
@@ -351,8 +359,9 @@ async function initAdmissions() {
   if (!response.ok) throw new Error(`日程データを読み込めませんでした (${response.status})`);
   const data = await response.json();
   examOptions = data.rows.map((row) => normalizeMethod(row, data.columns, data.sources));
-  validateAdmissionsData(examOptions);
+  validateAdmissionsData(examOptions, data.coverage);
   officialEvents = examOptions.flatMap(flattenOption);
+  $('#dataCoverage').textContent = `${new Set(examOptions.map((option) => option.university)).size}大学・${examOptions.length}方式。共通テスト利用・併用方式も掲載しています。`;
   migrateStoredData();
   renderAll();
 }

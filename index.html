@@ -29,7 +29,7 @@
       <div class="hero-copy">
         <span class="eyebrow">2027年度 一般選抜</span>
         <h1>受験日程を、<br><span>ひと目で整理。</span></h1>
-        <p>一次試験・二次試験・合格発表を、2027年1月〜3月のカレンダーで確認できます。</p>
+        <p>共通テスト・一次試験・二次試験・合格発表を、2027年1月〜3月のカレンダーで確認できます。</p>
       </div>
       <div class="hero-stat" aria-label="カレンダーの概要">
         <span>CALENDAR</span><strong>01—03</strong><small>JAN / FEB / MAR 2027</small>
@@ -38,7 +38,7 @@
 
     <aside class="notice" role="note">
       <span aria-hidden="true">i</span>
-      <p><b>日程は必ず最新の募集要項で確認してください。</b><br>2026年10月15日更新。公式資料を確認できた日程から反映しています。出典のある方式は「公式入試情報」から確認できます。</p>
+      <p><b>日程は必ず最新の募集要項で確認してください。</b><br><span id="dataCoverage">共通テスト利用・併用方式も掲載しています。</span><br>2026年10月15日更新。出典のある方式は「公式入試情報」から確認できます。受験日を選択する方式や、対象者が限られる試験は備考も確認してください。</p>
     </aside>
 
     <section class="workspace" aria-label="受験カレンダー">
@@ -57,7 +57,7 @@
 
         <div class="filters" aria-label="表示する日程">
           <button class="filter-chip is-active" data-type="all" type="button">すべて</button>
-          <button class="filter-chip" data-type="first" type="button"><i class="dot first"></i>一次</button>
+          <button class="filter-chip" data-type="first" type="button"><i class="dot first"></i>一次・共テ</button>
           <button class="filter-chip" data-type="second" type="button"><i class="dot second"></i>二次</button>
           <button class="filter-chip" data-type="result" type="button"><i class="dot result"></i>発表</button>
           <button class="filter-chip" data-type="custom" type="button"><i class="dot custom"></i>自分の予定</button>
@@ -74,7 +74,7 @@
         </div>
         <div class="calendar-grid" id="calendarGrid" role="grid" aria-labelledby="monthTitle"></div>
         <div class="legend" aria-label="凡例">
-          <span><i class="dot first"></i>一次試験</span>
+          <span><i class="dot first"></i>一次・共通テスト</span>
           <span><i class="dot second"></i>二次試験</span>
           <span><i class="dot result"></i>合格発表</span>
           <span><i class="dot custom"></i>自分の予定</span>

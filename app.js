@@ -76,7 +76,7 @@ function expandRange(start, end) {
   return dates;
 }
 
-function normalizeMethod(row, columns) {
+function normalizeMethod(row, columns, sources = {}) {
   const source = Object.fromEntries(columns.map((column, index) => [column, row[index]]));
   const firstStart = normalizeDate(source.firstStart);
   const firstEnd = normalizeDate(source.firstEnd);
@@ -91,13 +91,14 @@ function normalizeMethod(row, columns) {
     stages: {
       first: expandRange(firstStart, firstEnd),
       firstResult: source.firstResult ? [normalizeDate(source.firstResult)] : [],
-      second: expandRange(secondStart, secondEnd),
+      second: source.secondDates ? source.secondDates.map(normalizeDate) : expandRange(secondStart, secondEnd),
       final: source.secondResult ? [normalizeDate(source.secondResult)] : []
     },
     stageTimes: { firstResult: source.firstResultTime || '', final: source.secondResultTime || '' },
     firstVenue: source.firstVenue || '',
     secondVenue: source.secondVenue || '',
     note: source.note || '',
+    source: sources[source.university] || null,
     commonTest: !firstStart && Boolean(source.note && source.note.includes('共通テスト'))
   };
 }
@@ -275,7 +276,8 @@ function optionCardHTML(option, contextDate = '') {
   const meta = [
     option.firstVenue ? `<div><b>一次会場</b><span>${escapeHTML(option.firstVenue)}</span></div>` : '',
     option.secondVenue ? `<div><b>二次会場</b><span>${escapeHTML(option.secondVenue)}</span></div>` : '',
-    option.note ? `<div class="option-note"><b>備考</b><span>${escapeHTML(option.note)}</span></div>` : ''
+    option.note ? `<div class="option-note"><b>備考</b><span>${escapeHTML(option.note)}</span></div>` : '',
+    option.source ? `<div><b>出典</b><span><a href="${escapeHTML(option.source.url)}" target="_blank" rel="noopener noreferrer">公式入試情報</a>（${escapeHTML(option.source.checkedOn)}確認）</span></div>` : ''
   ].join('');
   return `<article class="exam-option${selected ? ' is-selected' : ''}" data-option-card="${option.id}"><div class="option-top"><label class="option-check"><input type="checkbox" data-option-check="${option.id}" ${selected ? 'checked' : ''}><span><b>${escapeHTML(option.shortName)} ${escapeHTML(option.method)}</b><small>${escapeHTML(option.university)} 医学部</small></span></label>${eventAtDate ? `<span class="option-day-tag">${escapeHTML(eventAtDate.label)}</span>` : ''}</div><div class="stage-flow"><div class="stage"><span>一次</span><b>${formatStage(option, 'first')}</b></div><div class="stage"><span>一次発表</span><b>${formatStage(option, 'firstResult')}</b></div><div class="stage"><span>二次</span><b>${formatStage(option, 'second')}</b></div><div class="stage"><span>合格発表</span><b>${formatStage(option, 'final')}</b></div></div>${meta ? `<div class="option-meta">${meta}</div>` : ''}<input class="option-memo" data-option-memo="${option.id}" value="${escapeHTML(optionMemos[option.id] || '')}" placeholder="${escapeHTML(option.shortName)} ${escapeHTML(option.method)}のメモ..."></article>`;
 }
@@ -348,7 +350,7 @@ async function initAdmissions() {
   const response = await fetch(DATA_URL);
   if (!response.ok) throw new Error(`日程データを読み込めませんでした (${response.status})`);
   const data = await response.json();
-  examOptions = data.rows.map((row) => normalizeMethod(row, data.columns));
+  examOptions = data.rows.map((row) => normalizeMethod(row, data.columns, data.sources));
   validateAdmissionsData(examOptions);
   officialEvents = examOptions.flatMap(flattenOption);
   migrateStoredData();
